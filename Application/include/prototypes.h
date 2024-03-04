@@ -5,7 +5,7 @@
 #define PROTOTYPE_H
 
 // Prototypes de fonctions
-void Led_Intensity(uint8_t newBrightness);
+void Led_Intensity(uint8_t new_brightness);
 void Start_Effect();
 void setup();
 void loop();
