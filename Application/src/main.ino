@@ -28,7 +28,7 @@ bool buzzer_ON = true;
 */
 // Réflex Times
 bool reflex_time_active = false;
-bool reflexTimeRunning = false;
+bool reflex_time_running = false;
 
 
 /*
@@ -109,7 +109,6 @@ void loop()
 	}
 }
 
-
 /*
     --------- --------- --------- --------- ---------- ---------- ----------
   --------- --------- --------- ------------- ---------- ---------- ----------
@@ -124,9 +123,9 @@ void loop()
 * Cette fonction ajuste l'intensité lumineuse des LED.
 ********************************
 */
-void Led_Intensity(uint8_t newBrightness)
+void Led_Intensity(uint8_t new_brightness)
 {
-	brightness = newBrightness;
+	brightness = new_brightness;
 	FastLED.setBrightness(brightness);
 }
 
@@ -143,63 +142,71 @@ void Start_Effect()
 
 	// Réglage des paramètres de l'effet de démarrage
 	Led_Intensity(200);
-	int numIterations = 3;
-	int delayPerIteration = 1000;
+	int num_iterations = 3;
+	// int delay_PerIteration = 1000;
 	CRGB colors[] = {CRGB::Red, CRGB::Orange, CRGB::Green};
-	int numColors = sizeof(colors) / sizeof(colors[0]);
+	int num_Colors = sizeof(colors) / sizeof(colors[0]);
 	bool sound_played = false;
 
+	// Boucle pour chaque tour et arrêter si le chargement n'est plus actif
+	for (int i = 0; i < num_iterations && loading_active; i++)
+	{
+		sound_played = false;
 
-	for (int i = 0; i < numIterations && loading_active; i++)
-	{ // Boucle pour chaque tour et arrêter si le chargement n'est plus actif
-		sound_played = false; // Indique si le son a été joué pour cette itération
+		// Boucle pour chaque LED
 		for (int j = 0; j < NUM_LEDS; j++)
-		{ // Boucle pour chaque LED
+		{
 			fill_solid(color_leds, NUM_LEDS, CRGB::Black); // Éteindre toutes les LEDs
+
+			// Boucle pour chaque groupe de 3 LED's
 			for (int k = 0; k < 3; k++)
-			{ // Boucle pour chaque groupe de 3 LEDs
-				color_leds[(j + k) % NUM_LEDS] = colors[i % numColors]; // Changer la couleur des trois LEDs
+			{
+				// Changer la couleur des trois LED's
+				color_leds[(j + k) % NUM_LEDS] = colors[i % num_Colors];
 			}
-			FastLED.show(); // Mettre à jour l'affichage des LEDs
+			FastLED.show();
+
+			// Vérifie si le son n'a pas été joué pour cette itération
 			if (buzzer_ON && !sound_played)
-			{ // Vérifie si le son n'a pas été joué pour cette itération
+			{
 				tone(tonePin, 1047, 150); // Do5 (C5), durée de la note : 150 ms
 				delay(150);
-				noTone(tonePin); // Éteindre le buzzer
-				sound_played = true; // Marque le son comme joué
+				noTone(tonePin);
+				sound_played = true;
 			}
 			delay(100); // Attendre un court instant entre les bips
 		}
 	}
 
-	if (loading_active) // Si le chargement est encore actif
+	// Si le chargement est encore actif
+	if (loading_active)
 	{
-		// Allumer toutes les LEDs en bleu
+		// Allumer toutes les LED's en bleu
 		fill_solid(color_leds, NUM_LEDS, CRGB::Blue);
 		FastLED.show();
 
 		// Vérifier si le buzzer est activé
 		if (buzzer_ON)
 		{
-			// Jouer le son spécial
+			// Jouer le son de commencement
 			tone(tonePin, 1294.54, 1000); // Do5 (C5), durée de la note : 800 ms
-			delay(1000); // Attendre la durée du son spécial
-			noTone(tonePin); // Arrêter le son spécial
+			delay(1000);
+			noTone(tonePin);
 		}
 		else
 		{
-			// Attendre 800 ms sans jouer de son
+			// Attendre 1000 ms sans jouer de son
 			delay(1000);
 		}
 
-		// Éteindre toutes les LEDs
+		// Éteindre toutes les LED's
 		fill_solid(color_leds, NUM_LEDS, CRGB::Black);
 		FastLED.show();
 		loading_active = false; // Arrêter le chargement
 
-		if (!reflexTimeRunning)
+		if (!reflex_time_running)
 		{
-			reflexTimeRunning = true;
+			reflex_time_running = true;
 			Reflex_Time();
 		}
 	}
@@ -237,9 +244,9 @@ void sound()
 void Reflex_Time()
 {
 	// Vérifie si le jeu n'est pas déjà en cours
-	if (!reflexTimeRunning)
+	if (!reflex_time_running)
 	{
-		reflexTimeRunning = true;
+		reflex_time_running = true;
 		switch_colorLed = false;
 
 		// Appel les fonctions
@@ -248,11 +255,11 @@ void Reflex_Time()
 		Led_Intensity(20);
 
 		// Temps de départ du jeu | Temps écouler depuis le début du jeu
-		unsigned long startTime = millis();
-		unsigned long elapsedTime = 0;
+		unsigned long start_time = millis();
+		unsigned long elapsed_time = 0;
 
 		// Jouer le jeu pendant x temps : 1000 = 1 secondes
-		while (elapsedTime < 100000)
+		while (elapsed_time < 100000)
 		{
 			// Sélectionner aléatoirement la couleur à afficher | Vert et Rouge
 			CRGB color = random(2) ? CRGB::Green : CRGB::Red;
@@ -269,14 +276,14 @@ void Reflex_Time()
 			delay(offTime);
 
 			// Mettre à jou temps écoulé depuis le début du jeu
-			elapsedTime = millis() - startTime;
+			elapsed_time = millis() - start_time;
 		}
 
 		// Effet de fin de jeu
 		endGameEffect();
 
 		// Mettre à jour l'état du jeu pour indiquer qu'il est en cours
-		reflexTimeRunning = false;
+		reflex_time_running = false;
 	}
 }
 
@@ -290,7 +297,7 @@ void Reflex_Time()
 void endGameEffect()
 {
 	// Définir la vitesse de rotation des couleurs et la luminosité
-	uint8_t colorRotationSpeed = 2;
+	uint8_t color_rotation_speed = 2;
 	Led_Intensity(200);
 
 	// Boucle infinie pour afficher l'effet de fin de jeu
@@ -308,7 +315,7 @@ void endGameEffect()
 			delay(20);
 
 			// Allumer les LED avec la couleur actuelle | Les afficher
-			color_leds[i] = ColorFromPalette(RainbowColors_p, millis() / colorRotationSpeed + i * 100);
+			color_leds[i] = ColorFromPalette(RainbowColors_p, millis() / color_rotation_speed + i * 100);
 			FastLED.show();
 
 			// Attendre un court instant avant de passer à la LED suivante
