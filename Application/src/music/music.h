@@ -3,5 +3,6 @@
 
 void Music_Clair_Lune();
 void Little_Start();
+void Music_Tapion();
 
 #endif
