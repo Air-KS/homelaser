@@ -1,12 +1,13 @@
 #include "main.h"
+#include "pitches.h"
 #include "prototypes.h"
 #include "broches.h"
+#include "music/music.h"
 
 // Définit les paramètres pour les LED : luminosité, couleurs et palette
 uint8_t brightness;
 CRGB color_leds[NUM_LEDS];
 CRGBPalette16 palette = RainbowColors_p;
-
 
 // Configuration des signaux infrarouges
 const uint16_t kRecvPin = 36; // Broche de réception
@@ -14,12 +15,10 @@ IRrecv irrecv(kRecvPin); // Initialisation du récepteur infrarouge
 decode_results results; // Stockage des résultats des signaux
 const uint32_t kBaudRate = 115200; // Taux de bauds pour la communication série
 
-
 // États des différents modes et fonctionnalités
 bool switch_colorLed = false;
 bool loading_active = false;
 bool buzzer_ON = true;
-
 
 /*
 *************************************************
@@ -30,15 +29,28 @@ bool buzzer_ON = true;
 bool reflex_time_active = false;
 bool reflex_time_running = false;
 
+/*
+*************************************************
+----- Variable de Test -----
+*************************************************
+*/
+const unsigned long PROGMEM expectedHex_touche_0 = 0xCFF30;
+const unsigned long PROGMEM expectedHex_touche_2 = 0xCDF32;
+const unsigned long PROGMEM expectedHex_touche_5 = 0xCAF35;
+const unsigned long PROGMEM expectedHex_touche_7 = 0xC8F37;
+const unsigned long PROGMEM expectedHex_touche_8 = 0xC7F38;
+const unsigned long PROGMEM expectedHex_touche_9 = 0xC6F39;
+const unsigned long PROGMEM expectedHex_volume_up = 0xD0F2F;
+const unsigned long PROGMEM expectedHex_volume_down = 0xD1F2E;
+
 
 /*
-    --------- --------- --------- --------- ---------- ---------- ----------
+	--------- --------- --------- --------- ---------- ---------- ----------
   --------- --------- --------- ------------- ---------- ---------- ----------
 --------- --------- --------- ----------------- ---------- ---------- ----------
   --------- --------- --------- ------------- ---------- ---------- ----------
-    --------- --------- --------- --------- ---------- ---------- ----------
+	--------- --------- --------- --------- ---------- ---------- ----------
 */
-
 
 /*
 *************************************************
@@ -65,7 +77,6 @@ void setup()
 	pinMode(SOUND_PIN, INPUT_PULLUP);
 	pinMode(tonePin, OUTPUT);
 }
-
 
 /*
 *************************************************
@@ -107,14 +118,21 @@ void loop()
 		fill_solid(color_leds, NUM_LEDS, CRGB::Black); // Éteindre toutes les LEDs
 		FastLED.show();
 	}
+	// Ajoute la détection de la télécommande infrarouge ici
+	if (irrecv.decode(&results))
+	{
+		Serial.println("Télécommande détectée !");
+		Serial.println(results.value, HEX);
+		irrecv.resume(); // Continue à écouter les signaux IR
+	}
 }
 
 /*
-    --------- --------- --------- --------- ---------- ---------- ----------
+	--------- --------- --------- --------- ---------- ---------- ----------
   --------- --------- --------- ------------- ---------- ---------- ----------
 --------- --------- --------- ----------------- ---------- ---------- ----------
   --------- --------- --------- ------------- ---------- ---------- ----------
-    --------- --------- --------- --------- ---------- ---------- ----------
+	--------- --------- --------- --------- ---------- ---------- ----------
 */
 
 /**
@@ -125,10 +143,32 @@ void loop()
 */
 void Led_Intensity(uint8_t new_brightness)
 {
-	brightness = new_brightness;
-	FastLED.setBrightness(brightness);
-}
+	const unsigned long PROGMEM up_led_intensity = 0xD2F2D;	  // Code IR pour augmenter la luminosité
+	const unsigned long PROGMEM down_led_intensity = 0xD3F2C; // Code IR pour diminuer la luminosité
 
+	if (irrecv.decode(&results))
+	{
+		if (results.value == up_led_intensity)
+		{ // Augmenter la luminosité
+			if (brightness < 255)
+			{
+				brightness += 10; // Augmenter la luminosité de 10 niveaux
+				FastLED.setBrightness(brightness);
+				Serial.println("Luminosité augmentée");
+			}
+		}
+		else if (results.value == down_led_intensity)
+		{ // Diminuer la luminosité
+			if (brightness > 0)
+			{
+				brightness -= 10; // Diminuer la luminosité de 10 niveaux
+				FastLED.setBrightness(brightness);
+				Serial.println("Luminosité diminuée");
+			}
+		}
+		irrecv.resume(); // Continue à écouter les signaux IR
+	}
+}
 
 /**
 ********************************
@@ -138,10 +178,10 @@ void Led_Intensity(uint8_t new_brightness)
 // Fonction pour l'effet de chargement
 void Start_Effect()
 {
+	Led_Intensity(200);
 	#define START_DELAY 50 // Délai entre chaque étape de chargement en millisecondes
 
 	// Réglage des paramètres de l'effet de démarrage
-	Led_Intensity(200);
 	int num_iterations = 3;
 	// int delay_PerIteration = 1000;
 	CRGB colors[] = {CRGB::Red, CRGB::Orange, CRGB::Green};
@@ -212,7 +252,6 @@ void Start_Effect()
 	}
 }
 
-
 /**
 ********************************
 * --- Commentaires
@@ -234,59 +273,58 @@ void sound()
 	}
 }
 
-
 /**
 ********************************
-* --- Commentaires
+* --- Mode de jeu ---
+* *** Réfléx-Time ***
 *******************************
 */
-// Mode d'entraînement - Réfléx-Time
+
 void Reflex_Time()
 {
+	// Constantes
+	const int GAME_DURATION = 5000; // Durée du jeu en millisecondes
+	const int MIN_OFF_TIME = 500; // Temps minimum d'extinction des LED en millisecondes
+	const int MAX_OFF_TIME = 3000; // Temps maximum d'extinction des LED en millisecondes
+
 	// Vérifie si le jeu n'est pas déjà en cours
 	if (!reflex_time_running)
 	{
 		reflex_time_running = true;
-		switch_colorLed = false;
 
 		// Appel les fonctions
 		Start_Effect();
 		delay(1000);
 		Led_Intensity(20);
 
-		// Temps de départ du jeu | Temps écouler depuis le début du jeu
+		// Temps de départ du jeu
 		unsigned long start_time = millis();
-		unsigned long elapsed_time = 0;
 
-		// Jouer le jeu pendant x temps : 1000 = 1 secondes
-		while (elapsed_time < 100000)
+		// Jouer le jeu pendant un certain temps
+		while (millis() - start_time < GAME_DURATION)
 		{
-			// Sélectionner aléatoirement la couleur à afficher | Vert et Rouge
+			// Sélectionner aléatoirement la couleur à afficher (vert ou rouge)
 			CRGB color = random(2) ? CRGB::Green : CRGB::Red;
 
-			// Afficher la couleur pendant 1,5 secondes
+			// Afficher la couleur
 			fill_solid(color_leds, NUM_LEDS, color);
 			FastLED.show();
 			delay(1500);
 
-			// Éteindre les LED's pendant une durée aléatoire entre 0.5 et 3 secondes
-			unsigned long offTime = random(500, 3001);
+			// Éteindre les LED's pendant une durée aléatoire
+			unsigned long off_time = random(MIN_OFF_TIME, MAX_OFF_TIME);
 			fill_solid(color_leds, NUM_LEDS, CRGB::Black);
 			FastLED.show();
-			delay(offTime);
-
-			// Mettre à jou temps écoulé depuis le début du jeu
-			elapsed_time = millis() - start_time;
+			delay(off_time);
 		}
 
 		// Effet de fin de jeu
-		endGameEffect();
+		End_Game_Effect();
 
-		// Mettre à jour l'état du jeu pour indiquer qu'il est en cours
+		// Mettre à jour l'état du jeu
 		reflex_time_running = false;
 	}
 }
-
 
 /**
 ********************************
@@ -294,7 +332,7 @@ void Reflex_Time()
 *******************************
 */
 // Fonction Fin du Jeu
-void endGameEffect()
+void End_Game_Effect()
 {
 	// Définir la vitesse de rotation des couleurs et la luminosité
 	uint8_t color_rotation_speed = 2;
@@ -306,13 +344,10 @@ void endGameEffect()
 		// Faire tourner les couleurs et jouer le son
 		for (int i = 0; i < NUM_LEDS; i++)
 		{
-			// Jouer un son pour indiquer la fin du jeu
-			tone(tonePin, 1319, 50); // Note Do6 pendant 250 ms
-			delay(20);
-			tone(tonePin, 1175, 50); // Note La5 pendant 250 ms
-			delay(20);
-			tone(tonePin, 1047, 50); // Note Do5 pendant 250 ms
-			delay(20);
+			// Musique fin de la partie
+			Music_Tapion();
+			Music_Clair_Lune();
+			Little_Start();
 
 			// Allumer les LED avec la couleur actuelle | Les afficher
 			color_leds[i] = ColorFromPalette(RainbowColors_p, millis() / color_rotation_speed + i * 100);
@@ -338,7 +373,6 @@ void endGameEffect()
 	}
 }
 
-
 /**
 ********************************
 * --- Commentaires
@@ -347,6 +381,8 @@ void endGameEffect()
 // Fonction pour changer de couleur en fonction de la télécommande IR
 void Switch_Color()
 {
+	Led_Intensity(150);
+
 	const unsigned long PROGMEM expectedHex_switch_color_rouge = 0xFF6897;
 	const unsigned long PROGMEM expectedHex_switch_color_vert = 0xFF7A85;
 	const unsigned long PROGMEM expectedHex_switch_color_bleu = 0xFF52AD;
