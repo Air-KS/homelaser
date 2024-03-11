@@ -1,4 +1,5 @@
-// prototype.h
+// include/prototype.h
+
 #include "main.h"
 
 #ifndef PROTOTYPE_H
@@ -13,5 +14,7 @@ void sound();
 void Reflex_Time();
 void Switch_Color();
 void End_Game_Effect();
+
+void Init_WiFi();
 
 #endif
