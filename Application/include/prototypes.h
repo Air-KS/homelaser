@@ -12,6 +12,6 @@ void loop();
 void sound();
 void Reflex_Time();
 void Switch_Color();
-void endGameEffect();
+void End_Game_Effect();
 
 #endif
