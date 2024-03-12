@@ -1,3 +1,5 @@
+//src/main.ino
+
 #include "main.h"
 #include "pitches.h"
 #include "prototypes.h"
@@ -16,6 +18,7 @@ decode_results results; // Stockage des résultats des signaux
 const uint32_t kBaudRate = 115200; // Taux de bauds pour la communication série
 
 // États des différents modes et fonctionnalités
+bool wifiConnected = false;
 bool switch_colorLed = false;
 bool loading_active = false;
 bool buzzer_ON = true;
@@ -61,6 +64,7 @@ void setup()
 {
 	// Initialise la communication et Attend qu'elle soit prête = 115200
 	Serial.begin(kBaudRate);
+	Init_WiFi();
 	while (!Serial)
 	{
 		delay(50);
@@ -83,8 +87,21 @@ void setup()
 ----- Boucle principale du programme -----
 *************************************************
 */
+
 void loop()
 {
+	// La connexion au Wi-Fi
+	if (WiFi.status() == WL_CONNECTED && !wifiConnected)
+	{
+	// La carte est connectée au réseau Wi-Fi
+	Serial.println("Connexion Wi-Fi réussi...");
+	wifiConnected = true;
+	} else if (WiFi.status() != WL_CONNECTED && wifiConnected) {
+		// La carte n'est plus connectée au réseau Wi-Fi
+		Serial.println("Connexion Wi-Fi échoué...");
+		wifiConnected = false;
+	}
+
 	// Vérifiez si le mode d'entraînement AIM doit être activé
 	if (digitalRead(REFLEX_TIME) == HIGH && !reflex_time_active)
 	{
