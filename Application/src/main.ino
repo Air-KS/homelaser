@@ -91,15 +91,31 @@ void setup()
 void loop()
 {
 	// La connexion au Wi-Fi
-	if (WiFi.status() == WL_CONNECTED && !wifiConnected)
+	if (WiFi.status() != WL_CONNECTED)
 	{
-	// La carte est connectée au réseau Wi-Fi
-	Serial.println("Connexion Wi-Fi réussi...");
-	wifiConnected = true;
-	} else if (WiFi.status() != WL_CONNECTED && wifiConnected) {
-		// La carte n'est plus connectée au réseau Wi-Fi
+		// La carte n'est pas connectée au réseau Wi-Fi
 		Serial.println("Connexion Wi-Fi échoué...");
 		wifiConnected = false;
+
+		// Définir la couleur des LED en rouge
+		fill_solid(color_leds, NUM_LEDS, CRGB::Red);
+		FastLED.show();
+
+		// Tenter de se reconnecter au réseau Wi-Fi
+		Init_WiFi();
+	}
+	else
+	{
+		// La carte est connectée au réseau Wi-Fi
+		if (!wifiConnected)
+		{
+			Serial.println("Connexion Wi-Fi réussi...");
+			wifiConnected = true;
+		}
+
+		// Définir la couleur des LED en vert (ou une autre couleur de votre choix)
+		fill_solid(color_leds, NUM_LEDS, CRGB::Green);
+		FastLED.show(); // Ou strip.show() si vous utilisez la bibliothèque Adafruit NeoPixel
 	}
 
 	// Vérifiez si le mode d'entraînement AIM doit être activé
