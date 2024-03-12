@@ -101,10 +101,10 @@ void Led_Intensity(uint8_t newBrightness)
 // Fonction pour changer de couleur en fonction de la télécommande IR
 void Switch_Color()
 {
-	const unsigned long PROGMEM expectedHex_switch_color_rouge = 0xCEF31;
-	const unsigned long PROGMEM expectedHex_switch_color_vert = 0xCDF32;
-	const unsigned long PROGMEM expectedHex_switch_color_bleu = 0xCCF33;
-	const unsigned long PROGMEM expectedHex_switch_color_blanc = 0xCFF30;
+	const unsigned long PROGMEM expectedHex_switch_color_rouge = 0x10001;
+	const unsigned long PROGMEM expectedHex_switch_color_vert = 0x10002;
+	const unsigned long PROGMEM expectedHex_switch_color_bleu = 0x10003;
+	const unsigned long PROGMEM expectedHex_switch_color_blanc = 0x10004;
 
 	if (irrecv.decode(&results))
 	{
