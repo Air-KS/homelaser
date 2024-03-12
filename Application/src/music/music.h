@@ -1,3 +1,5 @@
+// src/music/music.h
+
 #ifndef MUSIC_H
 #define MUSIC_H
 
