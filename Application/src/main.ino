@@ -11,6 +11,7 @@ uint8_t brightness;
 CRGB color_leds[NUM_LEDS];
 CRGBPalette16 palette = RainbowColors_p;
 
+
 // Configuration des signaux infrarouges
 const uint16_t kRecvPin = 36; // Broche de réception
 IRrecv irrecv(kRecvPin); // Initialisation du récepteur infrarouge
@@ -19,9 +20,11 @@ const uint32_t kBaudRate = 115200; // Taux de bauds pour la communication série
 
 // États des différents modes et fonctionnalités
 bool wifiConnected = false;
+bool ledColorSet = false;
 bool switch_colorLed = false;
 bool loading_active = false;
 bool buzzer_ON = true;
+
 
 /*
 *************************************************
@@ -37,14 +40,14 @@ bool reflex_time_running = false;
 ----- Variable de Test -----
 *************************************************
 */
-const unsigned long PROGMEM expectedHex_touche_0 = 0xCFF30;
-const unsigned long PROGMEM expectedHex_touche_2 = 0xCDF32;
-const unsigned long PROGMEM expectedHex_touche_5 = 0xCAF35;
-const unsigned long PROGMEM expectedHex_touche_7 = 0xC8F37;
-const unsigned long PROGMEM expectedHex_touche_8 = 0xC7F38;
-const unsigned long PROGMEM expectedHex_touche_9 = 0xC6F39;
-const unsigned long PROGMEM expectedHex_volume_up = 0xD0F2F;
-const unsigned long PROGMEM expectedHex_volume_down = 0xD1F2E;
+const unsigned long PROGMEM expectedHex_touche_0 = 0x10000;
+const unsigned long PROGMEM expectedHex_touche_1 = 0x10001;
+const unsigned long PROGMEM expectedHex_touche_2 = 0x10002;
+const unsigned long PROGMEM expectedHex_touche_3 = 0x10003;
+const unsigned long PROGMEM expectedHex_touche_4 = 0x10004;
+const unsigned long PROGMEM expectedHex_touche_5 = 0x10005;
+const unsigned long PROGMEM expectedHex_volume_up = 0x10020;
+const unsigned long PROGMEM expectedHex_volume_down = 0x10021;
 
 
 /*
@@ -91,50 +94,88 @@ void setup()
 void loop()
 {
 	// La connexion au Wi-Fi
-	if (WiFi.status() == WL_CONNECTED && !wifiConnected)
+	if (WiFi.status() != WL_CONNECTED)
 	{
-	// La carte est connectée au réseau Wi-Fi
-	Serial.println("Connexion Wi-Fi réussi...");
-	wifiConnected = true;
-	} else if (WiFi.status() != WL_CONNECTED && wifiConnected) {
-		// La carte n'est plus connectée au réseau Wi-Fi
+		// La carte n'est pas connectée au réseau Wi-Fi
 		Serial.println("Connexion Wi-Fi échoué...");
 		wifiConnected = false;
-	}
 
-	// Vérifiez si le mode d'entraînement AIM doit être activé
-	if (digitalRead(REFLEX_TIME) == HIGH && !reflex_time_active)
-	{
-		reflex_time_active = true;
-		switch_colorLed = false;
-		loading_active = true;
-		Reflex_Time();
-	}
-	else if (digitalRead(REFLEX_TIME) == LOW && reflex_time_active)
-	{
-		reflex_time_active = false;
-		loading_active = false;
-		fill_solid(color_leds, NUM_LEDS, CRGB::Black); // Éteindre toutes les LEDs
+		// Définir la couleur des LED en rouge
+		fill_solid(color_leds, NUM_LEDS, CRGB::Red);
 		FastLED.show();
+
+		// Réinitialiser la variable ledColorSet à false
+		ledColorSet = false;
+		// Tenter de se reconnecter au réseau Wi-Fi
+		Init_WiFi();
 	}
-	else if (digitalRead(SWITCH_COLOR) == LOW)
+	else
 	{
-		reflex_time_active = false;
-		loading_active = false;
-		if (!switch_colorLed)
+		// La carte est connectée au réseau Wi-Fi
+		if (!wifiConnected)
 		{
+			Serial.println("Connexion Wi-Fi réussi...");
+			wifiConnected = true;
+
+			// Vérifier si le buzzer est activé
+			if (buzzer_ON)
+			{
+				// Jouer un son positif pour indiquer que la connexion Internet est établie
+				tone(tonePin, 440, 200); // La4 (A4), durée de la note : 200 ms
+				delay(200);
+				noTone(tonePin);
+				delay(200);
+				tone(tonePin, 880, 200); // La5 (A5), durée de la note : 200 ms
+				delay(200);
+				noTone(tonePin);
+			}
+
+		}
+		// Vérifiez si la couleur des LED a déjà été définie
+		if (!ledColorSet)
+		{
+			// Définir la couleur des LED en vert (ou une autre couleur de votre choix)
+			fill_solid(color_leds, NUM_LEDS, CRGB::Green);
+			FastLED.show(); // Ou strip.show() si vous utilisez la bibliothèque Adafruit NeoPixel
+
+			ledColorSet = true; // Mettre à jour la variable pour indiquer que la couleur des LED a été définie
+		}
+
+		// Vérifiez si le mode d'entraînement AIM doit être activé
+		if (digitalRead(REFLEX_TIME) == HIGH && !reflex_time_active)
+		{
+			reflex_time_active = true;
+			switch_colorLed = false;
+			loading_active = true;
+			Reflex_Time();
+		}
+		else if (digitalRead(REFLEX_TIME) == LOW && reflex_time_active)
+		{
+			reflex_time_active = false;
 			loading_active = false;
-			fill_solid(color_leds, NUM_LEDS, CRGB::White);
+			fill_solid(color_leds, NUM_LEDS, CRGB::Black); // Éteindre toutes les LEDs
 			FastLED.show();
 		}
-		Switch_Color();
+		else if (digitalRead(SWITCH_COLOR) == LOW)
+		{
+			reflex_time_active = false;
+			loading_active = false;
+			if (!switch_colorLed)
+			{
+				loading_active = false;
+				fill_solid(color_leds, NUM_LEDS, CRGB::White);
+				FastLED.show();
+			}
+			Switch_Color();
+		}
+		else if (!reflex_time_active && loading_active)
+		{
+			loading_active = false;
+			fill_solid(color_leds, NUM_LEDS, CRGB::Black); // Éteindre toutes les LEDs
+			FastLED.show();
+		}
 	}
-	else if (!reflex_time_active && loading_active)
-	{
-		loading_active = false;
-		fill_solid(color_leds, NUM_LEDS, CRGB::Black); // Éteindre toutes les LEDs
-		FastLED.show();
-	}
+
 	// Ajoute la détection de la télécommande infrarouge ici
 	if (irrecv.decode(&results))
 	{
@@ -160,31 +201,9 @@ void loop()
 */
 void Led_Intensity(uint8_t new_brightness)
 {
-	const unsigned long PROGMEM up_led_intensity = 0xD2F2D;	  // Code IR pour augmenter la luminosité
-	const unsigned long PROGMEM down_led_intensity = 0xD3F2C; // Code IR pour diminuer la luminosité
-
-	if (irrecv.decode(&results))
-	{
-		if (results.value == up_led_intensity)
-		{ // Augmenter la luminosité
-			if (brightness < 255)
-			{
-				brightness += 10; // Augmenter la luminosité de 10 niveaux
-				FastLED.setBrightness(brightness);
-				Serial.println("Luminosité augmentée");
-			}
-		}
-		else if (results.value == down_led_intensity)
-		{ // Diminuer la luminosité
-			if (brightness > 0)
-			{
-				brightness -= 10; // Diminuer la luminosité de 10 niveaux
-				FastLED.setBrightness(brightness);
-				Serial.println("Luminosité diminuée");
-			}
-		}
-		irrecv.resume(); // Continue à écouter les signaux IR
-	}
+	brightness = new_brightness;
+	FastLED.setBrightness(brightness);
+	FastLED.show();
 }
 
 /**
@@ -195,7 +214,7 @@ void Led_Intensity(uint8_t new_brightness)
 // Fonction pour l'effet de chargement
 void Start_Effect()
 {
-	Led_Intensity(200);
+	//Led_Intensity(200);
 	#define START_DELAY 50 // Délai entre chaque étape de chargement en millisecondes
 
 	// Réglage des paramètres de l'effet de démarrage
@@ -353,7 +372,7 @@ void End_Game_Effect()
 {
 	// Définir la vitesse de rotation des couleurs et la luminosité
 	uint8_t color_rotation_speed = 2;
-	Led_Intensity(200);
+	//Led_Intensity(200);
 
 	// Boucle infinie pour afficher l'effet de fin de jeu
 	while (true)
@@ -362,9 +381,9 @@ void End_Game_Effect()
 		for (int i = 0; i < NUM_LEDS; i++)
 		{
 			// Musique fin de la partie
-			Music_Tapion();
-			Music_Clair_Lune();
-			Little_Start();
+			// Music_Tapion();
+			// Music_Clair_Lune();
+			// Little_Start();
 
 			// Allumer les LED avec la couleur actuelle | Les afficher
 			color_leds[i] = ColorFromPalette(RainbowColors_p, millis() / color_rotation_speed + i * 100);
@@ -398,53 +417,69 @@ void End_Game_Effect()
 // Fonction pour changer de couleur en fonction de la télécommande IR
 void Switch_Color()
 {
-	Led_Intensity(150);
+	//const unsigned long PROGMEM expectedHex_switch_color_rouge = 0x10001;
+	//const unsigned long PROGMEM expectedHex_switch_color_vert = 0x10002;
+	//const unsigned long PROGMEM expectedHex_switch_color_bleu = 0x10003;
+	//const unsigned long PROGMEM expectedHex_switch_color_blanc = 0x10004;
 
-	const unsigned long PROGMEM expectedHex_switch_color_rouge = 0xFF6897;
-	const unsigned long PROGMEM expectedHex_switch_color_vert = 0xFF7A85;
-	const unsigned long PROGMEM expectedHex_switch_color_bleu = 0xFF52AD;
-	const unsigned long PROGMEM expectedHex_switch_color_blanc = 0xFF42BD;
-
-	if (irrecv.decode(&results))
+	if (digitalRead(SWITCH_COLOR) == LOW)
 	{
-		Serial.print("Code IR reçu: 0x");
-		Serial.println(results.value, HEX); // Affiche le code reçu en HEX.
+		if (irrecv.decode(&results))
+		{
+			Led_Intensity(30);
 
-		if (results.value == expectedHex_switch_color_rouge)
-		{
-			// Change toutes les LEDs en rouge
-			fill_solid(color_leds, NUM_LEDS, CRGB(255, 0, 0));
-			Serial.println("Switch color Rouge");
-			switch_colorLed = true;
-			FastLED.show();
-		}
-		if (results.value == expectedHex_switch_color_vert)
-		{
-			// Change toutes les LEDs en vert
-			fill_solid(color_leds, NUM_LEDS, CRGB(0, 255, 0));
-			Serial.println("Switch color Vert");
-			switch_colorLed = true;
-			FastLED.show();
-		}
-		if (results.value == expectedHex_switch_color_bleu)
-		{
-			// Change toutes les LEDs en bleu
-			fill_solid(color_leds, NUM_LEDS, CRGB(0, 0, 255));
-			Serial.println("Switch color Bleu");
-			switch_colorLed = true;
-			FastLED.show();
-		}
-		if (results.value == expectedHex_switch_color_blanc)
-		{
-			// Change toutes les LEDs en blanc
-			fill_solid(color_leds, NUM_LEDS, CRGB(255, 255, 255));
-			Serial.println("Switch color Blanc");
-			switch_colorLed = true;
-			FastLED.show();
-		}
-		// D'autre condition ici (S'il en a d'autre à l'avenir)
+			Serial.print("Code IR reçu: 0x");
+			Serial.println(results.value, HEX); // Affiche le code reçu en HEX.
 
-		// Prépare pour le prochain signal IR
-		irrecv.resume();
+			// Touche couleur Rouge de la télécommande
+			if (results.value == 0x6D || results.value == 0x1006D)
+			{
+				// Change toutes les LEDs en rouge
+				fill_solid(color_leds, NUM_LEDS, CRGB(255, 0, 0));
+				Serial.println("Switch color Rouge");
+				switch_colorLed = true;
+				FastLED.show();
+			}
+			// Touche couleur Vert de la télécommande
+			if (results.value == 0x6E || results.value == 0x1006E)
+			{
+				// Change toutes les LEDs en vert
+				fill_solid(color_leds, NUM_LEDS, CRGB(0, 255, 0));
+				Serial.println("Switch color Vert");
+				switch_colorLed = true;
+				FastLED.show();
+			}
+			// Touche couleur Bleu de la télécommande
+			if (results.value == 0x70 || results.value == 0x10070)
+			{
+				// Change toutes les LEDs en bleu
+				fill_solid(color_leds, NUM_LEDS, CRGB(0, 0, 255));
+				Serial.println("Switch color Bleu");
+				switch_colorLed = true;
+				FastLED.show();
+			}
+			// Touche couleur Jaune de la télécommande
+			if (results.value == 0x6F || results.value == 0x1006F)
+			{
+				// Change toutes les LEDs en Jaune Gold
+				fill_solid(color_leds, NUM_LEDS, CRGB(255, 215, 0));
+				Serial.println("Switch color Jaune");
+				switch_colorLed = true;
+				FastLED.show();
+			}
+			// Touche Pause de la télécommande
+			if (results.value == 0x30 || results.value == 0x10030)
+			{
+				// Change toutes les LEDs en blanc
+				fill_solid(color_leds, NUM_LEDS, CRGB(255, 255, 255));
+				Serial.println("Switch color Blanc");
+				switch_colorLed = true;
+				FastLED.show();
+			}
+			// D'autre condition ici (S'il en a d'autre à l'avenir)
+
+			// Prépare pour le prochain signal IR
+			irrecv.resume();
+		}
 	}
 }
