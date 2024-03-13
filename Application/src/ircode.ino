@@ -111,7 +111,8 @@ void Switch_Color()
 		Serial.print("Code IR reçu: 0x");
 		Serial.println(results.value, HEX); // Affiche le code reçu en HEX.
 
-		if (results.value == expectedHex_switch_color_rouge)
+		// Touche couleur Rouge de la télécommande
+		if (results.value == 0x6D || results.value == 0x1006D)
 		{
 			// Change toutes les LEDs en rouge
 			fill_solid(color_leds, NUM_LEDS, CRGB(255, 0, 0));
@@ -119,7 +120,8 @@ void Switch_Color()
 			switch_colorLed = true;
 			FastLED.show();
 		}
-		if (results.value == expectedHex_switch_color_vert)
+		// Touche couleur Vert de la télécommande
+		if (results.value == 0x6E || results.value == 0x1006E)
 		{
 			// Change toutes les LEDs en vert
 			fill_solid(color_leds, NUM_LEDS, CRGB(0, 255, 0));
@@ -127,7 +129,8 @@ void Switch_Color()
 			switch_colorLed = true;
 			FastLED.show();
 		}
-		if (results.value == expectedHex_switch_color_bleu)
+		// Touche couleur Bleu de la télécommande
+		if (results.value == 0x70 || results.value == 0x10070)
 		{
 			// Change toutes les LEDs en bleu
 			fill_solid(color_leds, NUM_LEDS, CRGB(0, 0, 255));
@@ -135,7 +138,17 @@ void Switch_Color()
 			switch_colorLed = true;
 			FastLED.show();
 		}
-		if (results.value == expectedHex_switch_color_blanc)
+		// Touche couleur Jaune de la télécommande
+		if (results.value == 0x6F || results.value == 0x1006F)
+		{
+			// Change toutes les LEDs en Jaune Gold
+			fill_solid(color_leds, NUM_LEDS, CRGB(255, 215, 0));
+			Serial.println("Switch color Jaune");
+			switch_colorLed = true;
+			FastLED.show();
+		}
+		// Touche 0 de la télécommande
+		if (results.value == 0x0 || results.value == 0x10000)
 		{
 			// Change toutes les LEDs en blanc
 			fill_solid(color_leds, NUM_LEDS, CRGB(255, 255, 255));
