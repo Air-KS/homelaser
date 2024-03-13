@@ -316,50 +316,108 @@ void sound()
 *******************************
 */
 
-void Reflex_Time()
-{
-	// Constantes
-	const int GAME_DURATION = 5000; // Durée du jeu en millisecondes
-	const int MIN_OFF_TIME = 500; // Temps minimum d'extinction des LED en millisecondes
-	const int MAX_OFF_TIME = 3000; // Temps maximum d'extinction des LED en millisecondes
+void Reflex_Time() {
+    int score_red = 0;
+    int score_green = 0;
 
-	// Vérifie si le jeu n'est pas déjà en cours
-	if (!reflex_time_running)
-	{
-		reflex_time_running = true;
+    // Constantes
+    const int GAME_DURATION = 30000; // Durée du jeu en millisecondes
+    const int MIN_OFF_TIME = 500; // Temps minimum d'extinction des LED en millisecondes
+    const int MAX_OFF_TIME = 3000; // Temps maximum d'extinction des LED en millisecondes
 
-		// Appel les fonctions
-		Start_Effect();
-		delay(1000);
-		Led_Intensity(20);
+    Serial.println("Début du jeu, préparation...");
+    delay(1000); // Délai initial pour la préparation
+    Serial.println("Jeu démarré.");
 
-		// Temps de départ du jeu
-		unsigned long start_time = millis();
+    // Vérifie si le jeu n'est pas déjà en cours
+    if (!reflex_time_running) {
+        reflex_time_running = true;
 
-		// Jouer le jeu pendant un certain temps
-		while (millis() - start_time < GAME_DURATION)
-		{
-			// Sélectionner aléatoirement la couleur à afficher (vert ou rouge)
-			CRGB color = random(2) ? CRGB::Green : CRGB::Red;
+        Start_Effect();
+        Led_Intensity(20);
 
-			// Afficher la couleur
-			fill_solid(color_leds, NUM_LEDS, color);
-			FastLED.show();
-			delay(1500);
+        // Temps de départ du jeu
+        unsigned long start_time = millis();
 
-			// Éteindre les LED's pendant une durée aléatoire
-			unsigned long off_time = random(MIN_OFF_TIME, MAX_OFF_TIME);
-			fill_solid(color_leds, NUM_LEDS, CRGB::Black);
-			FastLED.show();
-			delay(off_time);
-		}
+        while (millis() - start_time < GAME_DURATION) {
+            CRGB color = random(2) ? CRGB::Green : CRGB::Red;
+            bool isColorGreen = (color == CRGB::Green);
 
-		// Effet de fin de jeu
-		End_Game_Effect();
+            fill_solid(color_leds, NUM_LEDS, color);
+            FastLED.show();
 
-		// Mettre à jour l'état du jeu
-		reflex_time_running = false;
-	}
+            Serial.print("Affichage couleur ");
+            Serial.println(isColorGreen ? "Verte" : "Rouge");
+            delay(5); // Petite pause avant de commencer à accepter les tirs
+
+            unsigned long display_time = random(MIN_OFF_TIME, MAX_OFF_TIME);
+            Serial.print("Durée d'affichage : ");
+            Serial.println(display_time);
+
+            unsigned long display_start_time = millis();
+            bool target_hit = false;
+
+            while (millis() - display_start_time < display_time && !target_hit) {
+                if (irrecv.decode(&results)) {
+                    Serial.print("Signal IR reçu : 0x");
+                    Serial.println(results.value, HEX);
+
+                    if ((results.value == 0x6D || results.value == 0x1006D) && !isColorGreen) {
+                        score_red++;
+                        Serial.println("Cible Rouge touché +1 point");
+						tone(tonePin, 1000, 100);
+						delay(5);
+                    } else if ((results.value == 0x6E || results.value == 0x1006E) && isColorGreen) {
+                        score_green++;
+                        Serial.println("Cible Verte touché +1 point");
+						tone(tonePin, 1000, 100);
+						delay(5);
+                    } else if ((results.value == 0x6D || results.value == 0x1006D) && isColorGreen) {
+                        score_red = max(0, score_red - 1);
+                        Serial.println("Cible Rouge touché -1 point");
+						tone(tonePin, 200, 100);
+						delay(5);
+                    } else if ((results.value == 0x6E || results.value == 0x1006E) && !isColorGreen) {
+                        score_green = max(0, score_green - 1);
+                        Serial.println("Cible Verte touché -1 point");
+						tone(tonePin, 200, 100);
+						delay(5);
+                    }
+
+                    if ((results.value == 0x6D || results.value == 0x1006D) || (results.value == 0x6E || results.value == 0x1006E)) {
+                        target_hit = true; // Marque qu'un tir valide a été effectué
+                    }
+
+                    Serial.print("Rouge : ");
+                    Serial.println(score_red);
+                    Serial.print("Vert : ");
+                    Serial.println(score_green);
+
+                    irrecv.resume(); // Prépare à recevoir le prochain signal
+                    delay(5);
+                }
+            }
+
+            if (target_hit) {
+                // Faire disparaître la cible immédiatement après avoir été touchée
+                fill_solid(color_leds, NUM_LEDS, CRGB::Black);
+                FastLED.show();
+                Serial.println("Cible touchée, extinction des LEDs.");
+            }
+
+            delay(MIN_OFF_TIME); // Pause avant de réafficher une nouvelle couleur
+        }
+
+        Serial.println("Fin du jeu. Affichage des scores finaux :");
+        Serial.print("Score Rouge : ");
+        Serial.println(score_red);
+        Serial.print("Score Vert : ");
+        Serial.println(score_green);
+
+        End_Game_Effect();
+
+        reflex_time_running = false;
+    }
 }
 
 /**
