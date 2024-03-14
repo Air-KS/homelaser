@@ -289,59 +289,6 @@ void sound()
 
 /**
 ********************************
-* --- Mode de jeu ---
-* *** Réfléx-Time ***
-*******************************
-*/
-
-void Reflex_Time()
-{
-	// Constantes
-	const int GAME_DURATION = 5000; // Durée du jeu en millisecondes
-	const int MIN_OFF_TIME = 500; // Temps minimum d'extinction des LED en millisecondes
-	const int MAX_OFF_TIME = 3000; // Temps maximum d'extinction des LED en millisecondes
-
-	// Vérifie si le jeu n'est pas déjà en cours
-	if (!reflex_time_running)
-	{
-		reflex_time_running = true;
-
-		// Appel les fonctions
-		Start_Effect();
-		delay(1000);
-		Led_Intensity(20);
-
-		// Temps de départ du jeu
-		unsigned long start_time = millis();
-
-		// Jouer le jeu pendant un certain temps
-		while (millis() - start_time < GAME_DURATION)
-		{
-			// Sélectionner aléatoirement la couleur à afficher (vert ou rouge)
-			CRGB color = random(2) ? CRGB::Green : CRGB::Red;
-
-			// Afficher la couleur
-			fill_solid(color_leds, NUM_LEDS, color);
-			FastLED.show();
-			delay(1500);
-
-			// Éteindre les LED's pendant une durée aléatoire
-			unsigned long off_time = random(MIN_OFF_TIME, MAX_OFF_TIME);
-			fill_solid(color_leds, NUM_LEDS, CRGB::Black);
-			FastLED.show();
-			delay(off_time);
-		}
-
-		// Effet de fin de jeu
-		End_Game_Effect();
-
-		// Mettre à jour l'état du jeu
-		reflex_time_running = false;
-	}
-}
-
-/**
-********************************
 * --- Commentaires
 *******************************
 */
