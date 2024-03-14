@@ -11,7 +11,6 @@ void Start_Effect();
 void setup();
 void loop();
 void sound();
-void Reflex_Time();
 void Switch_Color();
 void End_Game_Effect();
 

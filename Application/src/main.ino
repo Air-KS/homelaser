@@ -5,6 +5,7 @@
 #include "prototypes.h"
 #include "broches.h"
 #include "music/music.h"
+#include "games/games.h"
 
 // Définit les paramètres pour les LED : luminosité, couleurs et palette
 uint8_t brightness;
@@ -15,8 +16,10 @@ CRGBPalette16 palette = RainbowColors_p;
 // Configuration des signaux infrarouges
 const uint16_t kRecvPin = 36; // Broche de réception
 IRrecv irrecv(kRecvPin); // Initialisation du récepteur infrarouge
-decode_results results; // Stockage des résultats des signaux
+// Stockage des résultats des signaux
 const uint32_t kBaudRate = 115200; // Taux de bauds pour la communication série
+
+decode_results results;
 
 // États des différents modes et fonctionnalités
 bool wifiConnected = false;
@@ -26,28 +29,8 @@ bool loading_active = false;
 bool buzzer_ON = true;
 
 
-/*
-*************************************************
------ Variable pour les modes de jeux -----
-*************************************************
-*/
-// Réflex Times
 bool reflex_time_active = false;
 bool reflex_time_running = false;
-
-/*
-*************************************************
------ Variable de Test -----
-*************************************************
-*/
-const unsigned long PROGMEM expectedHex_touche_0 = 0x10000;
-const unsigned long PROGMEM expectedHex_touche_1 = 0x10001;
-const unsigned long PROGMEM expectedHex_touche_2 = 0x10002;
-const unsigned long PROGMEM expectedHex_touche_3 = 0x10003;
-const unsigned long PROGMEM expectedHex_touche_4 = 0x10004;
-const unsigned long PROGMEM expectedHex_touche_5 = 0x10005;
-const unsigned long PROGMEM expectedHex_volume_up = 0x10020;
-const unsigned long PROGMEM expectedHex_volume_down = 0x10021;
 
 
 /*
@@ -141,6 +124,7 @@ void loop()
 			ledColorSet = true; // Mettre à jour la variable pour indiquer que la couleur des LED a été définie
 		}
 
+////////////////////////////////////////////////////////////////////////////////
 		// Vérifiez si le mode d'entraînement AIM doit être activé
 		if (digitalRead(REFLEX_TIME) == HIGH && !reflex_time_active)
 		{
@@ -175,14 +159,8 @@ void loop()
 			FastLED.show();
 		}
 	}
+////////////////////////////////////////////////////////////////////////////////
 
-	// Ajoute la détection de la télécommande infrarouge ici
-	if (irrecv.decode(&results))
-	{
-		Serial.println("Télécommande détectée !");
-		Serial.println(results.value, HEX);
-		irrecv.resume(); // Continue à écouter les signaux IR
-	}
 }
 
 /*
@@ -316,108 +294,50 @@ void sound()
 *******************************
 */
 
-void Reflex_Time() {
-    int score_red = 0;
-    int score_green = 0;
+void Reflex_Time()
+{
+	// Constantes
+	const int GAME_DURATION = 5000; // Durée du jeu en millisecondes
+	const int MIN_OFF_TIME = 500; // Temps minimum d'extinction des LED en millisecondes
+	const int MAX_OFF_TIME = 3000; // Temps maximum d'extinction des LED en millisecondes
 
-    // Constantes
-    const int GAME_DURATION = 30000; // Durée du jeu en millisecondes
-    const int MIN_OFF_TIME = 500; // Temps minimum d'extinction des LED en millisecondes
-    const int MAX_OFF_TIME = 3000; // Temps maximum d'extinction des LED en millisecondes
+	// Vérifie si le jeu n'est pas déjà en cours
+	if (!reflex_time_running)
+	{
+		reflex_time_running = true;
 
-    Serial.println("Début du jeu, préparation...");
-    delay(1000); // Délai initial pour la préparation
-    Serial.println("Jeu démarré.");
+		// Appel les fonctions
+		Start_Effect();
+		delay(1000);
+		Led_Intensity(20);
 
-    // Vérifie si le jeu n'est pas déjà en cours
-    if (!reflex_time_running) {
-        reflex_time_running = true;
+		// Temps de départ du jeu
+		unsigned long start_time = millis();
 
-        Start_Effect();
-        Led_Intensity(20);
+		// Jouer le jeu pendant un certain temps
+		while (millis() - start_time < GAME_DURATION)
+		{
+			// Sélectionner aléatoirement la couleur à afficher (vert ou rouge)
+			CRGB color = random(2) ? CRGB::Green : CRGB::Red;
 
-        // Temps de départ du jeu
-        unsigned long start_time = millis();
+			// Afficher la couleur
+			fill_solid(color_leds, NUM_LEDS, color);
+			FastLED.show();
+			delay(1500);
 
-        while (millis() - start_time < GAME_DURATION) {
-            CRGB color = random(2) ? CRGB::Green : CRGB::Red;
-            bool isColorGreen = (color == CRGB::Green);
+			// Éteindre les LED's pendant une durée aléatoire
+			unsigned long off_time = random(MIN_OFF_TIME, MAX_OFF_TIME);
+			fill_solid(color_leds, NUM_LEDS, CRGB::Black);
+			FastLED.show();
+			delay(off_time);
+		}
 
-            fill_solid(color_leds, NUM_LEDS, color);
-            FastLED.show();
+		// Effet de fin de jeu
+		End_Game_Effect();
 
-            Serial.print("Affichage couleur ");
-            Serial.println(isColorGreen ? "Verte" : "Rouge");
-            delay(5); // Petite pause avant de commencer à accepter les tirs
-
-            unsigned long display_time = random(MIN_OFF_TIME, MAX_OFF_TIME);
-            Serial.print("Durée d'affichage : ");
-            Serial.println(display_time);
-
-            unsigned long display_start_time = millis();
-            bool target_hit = false;
-
-            while (millis() - display_start_time < display_time && !target_hit) {
-                if (irrecv.decode(&results)) {
-                    Serial.print("Signal IR reçu : 0x");
-                    Serial.println(results.value, HEX);
-
-                    if ((results.value == 0x6D || results.value == 0x1006D) && !isColorGreen) {
-                        score_red++;
-                        Serial.println("Cible Rouge touché +1 point");
-						tone(tonePin, 1000, 100);
-						delay(5);
-                    } else if ((results.value == 0x6E || results.value == 0x1006E) && isColorGreen) {
-                        score_green++;
-                        Serial.println("Cible Verte touché +1 point");
-						tone(tonePin, 1000, 100);
-						delay(5);
-                    } else if ((results.value == 0x6D || results.value == 0x1006D) && isColorGreen) {
-                        score_red = max(0, score_red - 1);
-                        Serial.println("Cible Rouge touché -1 point");
-						tone(tonePin, 200, 100);
-						delay(5);
-                    } else if ((results.value == 0x6E || results.value == 0x1006E) && !isColorGreen) {
-                        score_green = max(0, score_green - 1);
-                        Serial.println("Cible Verte touché -1 point");
-						tone(tonePin, 200, 100);
-						delay(5);
-                    }
-
-                    if ((results.value == 0x6D || results.value == 0x1006D) || (results.value == 0x6E || results.value == 0x1006E)) {
-                        target_hit = true; // Marque qu'un tir valide a été effectué
-                    }
-
-                    Serial.print("Rouge : ");
-                    Serial.println(score_red);
-                    Serial.print("Vert : ");
-                    Serial.println(score_green);
-
-                    irrecv.resume(); // Prépare à recevoir le prochain signal
-                    delay(5);
-                }
-            }
-
-            if (target_hit) {
-                // Faire disparaître la cible immédiatement après avoir été touchée
-                fill_solid(color_leds, NUM_LEDS, CRGB::Black);
-                FastLED.show();
-                Serial.println("Cible touchée, extinction des LEDs.");
-            }
-
-            delay(MIN_OFF_TIME); // Pause avant de réafficher une nouvelle couleur
-        }
-
-        Serial.println("Fin du jeu. Affichage des scores finaux :");
-        Serial.print("Score Rouge : ");
-        Serial.println(score_red);
-        Serial.print("Score Vert : ");
-        Serial.println(score_green);
-
-        End_Game_Effect();
-
-        reflex_time_running = false;
-    }
+		// Mettre à jour l'état du jeu
+		reflex_time_running = false;
+	}
 }
 
 /**
