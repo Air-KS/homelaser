@@ -23,7 +23,7 @@ void Reflex_Time() {
 		reflex_time_running = true; // Le jeu en cours
 
 		// comment
-		//Start_Effect();
+		Start_Effect();
 		delay(1000);
 		Led_Intensity(20);
 
@@ -54,7 +54,7 @@ void Reflex_Time() {
 							if (((results.value == 0x6D || results.value == 0x1006D) && !isColorGreen) ||
 								((results.value == 0x6E || results.value == 0x1006E) && isColorGreen)) {
 								// Tir valide
-								//playPositiveSound();
+								playPositiveSound();
 
 								// Mettre à jour les scores en respectant les règles
 								if (isColorGreen) {
@@ -102,13 +102,13 @@ void Reflex_Time() {
 								delay(500);
 							} else if ((results.value == 0x6D || results.value == 0x1006D) && isColorGreen) {
 								// Tir rouge sur cible verte
-								//playNegativeSound();
+								playNegativeSound();
 								Serial.println("Tir incorrect : -1 point");
 								if (score_red > 0)
 									score_red--;
 							} else if ((results.value == 0x6E || results.value == 0x1006E) && !isColorGreen) {
 								// Tir vert sur cible rouge
-								//playNegativeSound();
+								playNegativeSound();
 								Serial.println("Tir incorrect : -1 point");
 								if (score_green > 0)
 									score_green--;
