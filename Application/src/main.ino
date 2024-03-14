@@ -5,6 +5,7 @@
 #include "prototypes.h"
 #include "broches.h"
 #include "music/music.h"
+#include "games/games.h"
 
 // Définit les paramètres pour les LED : luminosité, couleurs et palette
 uint8_t brightness;
@@ -15,8 +16,10 @@ CRGBPalette16 palette = RainbowColors_p;
 // Configuration des signaux infrarouges
 const uint16_t kRecvPin = 36; // Broche de réception
 IRrecv irrecv(kRecvPin); // Initialisation du récepteur infrarouge
-decode_results results; // Stockage des résultats des signaux
+// Stockage des résultats des signaux
 const uint32_t kBaudRate = 115200; // Taux de bauds pour la communication série
+
+decode_results results;
 
 // États des différents modes et fonctionnalités
 bool wifiConnected = false;
@@ -26,28 +29,8 @@ bool loading_active = false;
 bool buzzer_ON = true;
 
 
-/*
-*************************************************
------ Variable pour les modes de jeux -----
-*************************************************
-*/
-// Réflex Times
 bool reflex_time_active = false;
 bool reflex_time_running = false;
-
-/*
-*************************************************
------ Variable de Test -----
-*************************************************
-*/
-const unsigned long PROGMEM expectedHex_touche_0 = 0x10000;
-const unsigned long PROGMEM expectedHex_touche_1 = 0x10001;
-const unsigned long PROGMEM expectedHex_touche_2 = 0x10002;
-const unsigned long PROGMEM expectedHex_touche_3 = 0x10003;
-const unsigned long PROGMEM expectedHex_touche_4 = 0x10004;
-const unsigned long PROGMEM expectedHex_touche_5 = 0x10005;
-const unsigned long PROGMEM expectedHex_volume_up = 0x10020;
-const unsigned long PROGMEM expectedHex_volume_down = 0x10021;
 
 
 /*
@@ -141,6 +124,7 @@ void loop()
 			ledColorSet = true; // Mettre à jour la variable pour indiquer que la couleur des LED a été définie
 		}
 
+////////////////////////////////////////////////////////////////////////////////
 		// Vérifiez si le mode d'entraînement AIM doit être activé
 		if (digitalRead(REFLEX_TIME) == HIGH && !reflex_time_active)
 		{
@@ -175,14 +159,8 @@ void loop()
 			FastLED.show();
 		}
 	}
+////////////////////////////////////////////////////////////////////////////////
 
-	// Ajoute la détection de la télécommande infrarouge ici
-	if (irrecv.decode(&results))
-	{
-		Serial.println("Télécommande détectée !");
-		Serial.println(results.value, HEX);
-		irrecv.resume(); // Continue à écouter les signaux IR
-	}
 }
 
 /*
@@ -306,59 +284,6 @@ void sound()
 	{
 		buzzer_ON = false;
 		Serial.println("Le son n'est pas detecté.");
-	}
-}
-
-/**
-********************************
-* --- Mode de jeu ---
-* *** Réfléx-Time ***
-*******************************
-*/
-
-void Reflex_Time()
-{
-	// Constantes
-	const int GAME_DURATION = 5000; // Durée du jeu en millisecondes
-	const int MIN_OFF_TIME = 500; // Temps minimum d'extinction des LED en millisecondes
-	const int MAX_OFF_TIME = 3000; // Temps maximum d'extinction des LED en millisecondes
-
-	// Vérifie si le jeu n'est pas déjà en cours
-	if (!reflex_time_running)
-	{
-		reflex_time_running = true;
-
-		// Appel les fonctions
-		Start_Effect();
-		delay(1000);
-		Led_Intensity(20);
-
-		// Temps de départ du jeu
-		unsigned long start_time = millis();
-
-		// Jouer le jeu pendant un certain temps
-		while (millis() - start_time < GAME_DURATION)
-		{
-			// Sélectionner aléatoirement la couleur à afficher (vert ou rouge)
-			CRGB color = random(2) ? CRGB::Green : CRGB::Red;
-
-			// Afficher la couleur
-			fill_solid(color_leds, NUM_LEDS, color);
-			FastLED.show();
-			delay(1500);
-
-			// Éteindre les LED's pendant une durée aléatoire
-			unsigned long off_time = random(MIN_OFF_TIME, MAX_OFF_TIME);
-			fill_solid(color_leds, NUM_LEDS, CRGB::Black);
-			FastLED.show();
-			delay(off_time);
-		}
-
-		// Effet de fin de jeu
-		End_Game_Effect();
-
-		// Mettre à jour l'état du jeu
-		reflex_time_running = false;
 	}
 }
 
