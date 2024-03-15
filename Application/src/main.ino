@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 //src/main.ino
 
 #include "main.h"
@@ -407,4 +408,18 @@ void Switch_Color()
 			irrecv.resume();
 		}
 	}
+=======
+#include <Arduino.h>
+#include "BrokerMQTT.h"
+
+void setup()
+{
+    Serial.begin(115200);
+    BrokerMQTT_setup();
+}
+
+void loop()
+{
+    BrokerMQTT_loop();
+>>>>>>> b850ecb29a47b381896bfc1bff7f2382668c8b22
 }
