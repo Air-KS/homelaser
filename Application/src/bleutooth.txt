@@ -1,0 +1,43 @@
+/* src/bluetooth.ino */
+
+/**************
+* Carte Maitre
+***************/
+
+#include "BluetoothSerial.h"
+
+#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+#error Bluetooth is not enabled! Please run `make menuconfig` to enable it
+#endif
+
+BluetoothSerial SerialBT;
+bool isConnected = false;
+
+void setup() {
+	Serial.begin(115200);
+	SerialBT.begin("ESP32"); // Nom du périphérique Bluetooth
+	Serial.println("Le périphérique a démarré, vous pouvez maintenant le connecter via Bluetooth !");
+	SerialBT.register_callback(btCallback);
+}
+
+void loop() {
+	if (SerialBT.available()) {
+		Serial.write(SerialBT.read());
+	}
+
+	if (Serial.available()) {
+		SerialBT.write(Serial.read());
+	}
+
+	delay(1000); // Attends 1 seconde avant de mettre à jour l'état de la connexion
+}
+
+void btCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
+	if (event == ESP_SPP_SRV_OPEN_EVT) {
+		Serial.println("Connexion Bluetooth établie !");
+		isConnected = true;
+	} else if (event == ESP_SPP_CLOSE_EVT) {
+		Serial.println("Connexion Bluetooth fermée !");
+		isConnected = false;
+	}
+}
