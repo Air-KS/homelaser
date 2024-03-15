@@ -1,0 +1,33 @@
+#include <BluetoothSerial.h>
+
+BluetoothSerial SerialBT;
+
+const char* ESP32_ESCLAVE_PREFIX = "ESP32_ESCLAVE_";
+const int NUM_ESCLAVES = 15; // Nombre total de cartes esclaves
+
+void setup() {
+  Serial.begin(115200);
+  SerialBT.begin("ESP32_MASTER", true); // Nom du périphérique Bluetooth maître
+  Serial.println("Le périphérique maître a démarré, en attente de connexion Bluetooth !");
+  SerialBT.register_callback(btCallback);
+}
+
+void loop() {
+  // Recherche et connexion aux périphériques esclaves
+  for (int i = 1; i <= NUM_ESCLAVES; i++) {
+    char deviceName[30];
+    sprintf(deviceName, "%s%d", ESP32_ESCLAVE_PREFIX, i);
+    SerialBT.connect(deviceName);
+    delay(1000); // Attends 1 seconde avant de tenter de se connecter au prochain périphérique esclave
+  }
+  delay(5000); // Attend 5 secondes avant de recommencer la recherche
+}
+
+void btCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
+  if (event == ESP_SPP_SRV_OPEN_EVT) {
+    Serial.println("Connexion Bluetooth établie !");
+    // Ici, tu peux ajouter du code pour gérer la communication avec les périphériques esclaves
+  } else if (event == ESP_SPP_CLOSE_EVT) {
+    Serial.println("Connexion Bluetooth fermée !");
+  }
+}

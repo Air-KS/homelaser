@@ -1,0 +1,28 @@
+#include <Arduino.h>
+#include "BluetoothSerial.h"
+
+BluetoothSerial SerialBT;
+
+void setup() {
+  Serial.begin(115200);
+  SerialBT.begin("ESP32_MASTER", true); // Nom Bluetooth du maître
+  Serial.println("Master: Bluetooth initialisé");
+}
+
+void loop() {
+  // Si la connexion Bluetooth n'est pas établie, essaie de se connecter à l'esclave
+  if (!SerialBT.connected()) {
+    SerialBT.connect("ESP32_SLAVE"); // Nom Bluetooth de l'esclave
+  }
+
+  // Attend une réponse de l'esclave via Bluetooth
+  if (SerialBT.available()) {
+    String response = SerialBT.readStringUntil('\n');
+    Serial.println("Message from slave: " + response);
+  }
+
+  // Envoie un signal à l'esclave pour lancer le jeu Switch Color
+  SerialBT.println("START_SWITCH_COLOR");
+
+  delay(1000);
+}

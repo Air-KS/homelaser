@@ -1,0 +1,28 @@
+#include <BluetoothSerial.h>
+
+BluetoothSerial SerialBT;
+bool isConnected = false;
+
+const char* deviceName = "ESP32_ESCLAVE_1"; // Remplacez "ESP32_ESCLAVE_1" par le nom de votre périphérique esclave
+
+void setup() {
+  Serial.begin(115200);
+  SerialBT.begin(deviceName); // Initialisation du Bluetooth avec le nom du périphérique esclave
+  SerialBT.register_callback(btCallback);
+
+  Serial.println("Le périphérique esclave a démarré, en attente de connexion Bluetooth !");
+}
+
+void loop() {
+  // Le code de l'esclave peut être placé ici pour gérer les actions lorsqu'il est connecté au périphérique maître
+}
+
+void btCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
+  if (event == ESP_SPP_SRV_OPEN_EVT) {
+    Serial.println("Connexion Bluetooth établie !");
+    isConnected = true;
+  } else if (event == ESP_SPP_CLOSE_EVT) {
+    Serial.println("Connexion Bluetooth fermée !");
+    isConnected = false;
+  }
+}

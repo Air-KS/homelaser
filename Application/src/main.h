@@ -7,4 +7,11 @@
 #include <IRrecv.h>
 #include <IRutils.h>
 
+#include "broches.h"
+
+extern CRGB color_leds[NUM_LEDS];
+extern decode_results results;
+extern const uint16_t kRecvPin;
+extern IRrecv irrecv;
+
 #endif

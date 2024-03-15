@@ -1,0 +1,34 @@
+/**************
+* Carte esclave
+***************/
+
+#include "BluetoothSerial.h"
+
+BluetoothSerial SerialBT;
+bool isConnected = false;
+
+const char* targetDeviceName = "ESP32"; // Nom du périphérique Bluetooth cible
+
+void setup() {
+  Serial.begin(115200);
+  SerialBT.begin("ESP32"); // Initialisation du Bluetooth sans spécifier le mode maître/esclave
+  SerialBT.register_callback(btCallback);
+}
+
+void loop() {
+  if (!isConnected) {
+    SerialBT.connect(targetDeviceName); // Tentative de connexion au périphérique cible
+    delay(5000); // Attend 5 secondes avant de vérifier à nouveau la connexion
+  }
+}
+
+void btCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
+  if (event == ESP_SPP_SRV_OPEN_EVT) {
+    Serial.println("Connexion Bluetooth établie !");
+    isConnected = true;
+    SerialBT.println("Appareil connecté !");
+  } else if (event == ESP_SPP_CLOSE_EVT) {
+    Serial.println("Connexion Bluetooth fermée !");
+    isConnected = false;
+  }
+}
