@@ -3,8 +3,9 @@
 #ifndef BROKERMQTT_H
 #define BROKERMQTT_H
 
-void Init_WiFi();
 void BrokerMQTT_setup();
 void BrokerMQTT_loop();
+void Init_WiFi();
+void reconnect ();
 
 #endif
