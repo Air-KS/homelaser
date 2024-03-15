@@ -3,6 +3,11 @@
 /* Library */
 #include "games.h"
 
+String colorToString(CRGB color)
+{
+	return "R:" + String(color.r) + " G:" + String(color.g) + " B:" + String(color.b);
+}
+
 /**
 ********************************
 * --- Switch Color
@@ -23,6 +28,12 @@ void Switch_Color()
 			// Touche couleur Rouge de la télécommande
 			if (results.value == 0x6D || results.value == 0x1006D)
 			{
+				if (switch_colorLed)
+				{
+        			// Envoyer un message à la carte maître via Bluetooth
+        			SerialBT.println("Color changed: " + colorToString(color_leds[0])); // Envoyer la couleur de la première LED
+        			switch_colorLed = false; // Réinitialiser le flag pour éviter l'envoi répété
+    			}
 				// Change toutes les LEDs en rouge
 				fill_solid(color_leds, NUM_LEDS, CRGB(255, 0, 0));
 				Serial.println("Switch color Rouge");

@@ -7,12 +7,11 @@
 #include "music/music.h"
 #include "games/games.h"
 
-BluetoothSerial SerialBT;
-
 // Définit les paramètres pour les LED : luminosité, couleurs et palette
 uint8_t brightness;
 CRGB color_leds[NUM_LEDS];
 CRGBPalette16 palette = RainbowColors_p;
+
 
 // Configuration des signaux infrarouges
 const uint16_t kRecvPin = 36; // Broche de réception
@@ -49,8 +48,13 @@ bool reflex_time_running = false;
 */
 void setup()
 {
-	// Initialise la communication série
-	Serial.begin(115200);
+	// Initialise la communication et Attend qu'elle soit prête = 115200
+	Serial.begin(kBaudRate);
+	Init_WiFi();
+	while (!Serial)
+	{
+		delay(50);
+	}
 
 	// Initialise les LED's, définit la luminosité et active la réception infrarouge
 	FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(color_leds, NUM_LEDS);
@@ -62,12 +66,6 @@ void setup()
 	pinMode(SWITCH_COLOR, INPUT_PULLUP);
 	pinMode(SOUND_PIN, INPUT_PULLUP);
 	pinMode(tonePin, OUTPUT);
-
-	// Initialisation de la communication Bluetooth
-	SerialBT.begin("ESP32_SLAVE"); // Nom Bluetooth de l'esclave
-	Serial.println("Slave: Bluetooth initialisé");
-
-	// Appel des fonctions d'initialisation
 }
 
 /*
@@ -78,60 +76,92 @@ void setup()
 
 void loop()
 {
-    // Vérifie si une connexion Bluetooth est établie
-    if (SerialBT.connected())
-    {
-        // Jouer un son pour indiquer que la connexion Bluetooth est établie
-        if (buzzer_ON)
-        {
-            tone(tonePin, 440, 200);
-            delay(200);
-            noTone(tonePin);
-            delay(200);
-            tone(tonePin, 880, 200);
-            delay(200);
-            noTone(tonePin);
-        }
+	// La connexion au Wi-Fi
+	if (WiFi.status() != WL_CONNECTED)
+	{
+		// La carte n'est pas connectée au réseau Wi-Fi
+		Serial.println("Connexion Wi-Fi échoué...");
+		wifiConnected = false;
 
-        // Définir la couleur des LED en vert pour indiquer que la connexion est établie
-        fill_solid(color_leds, NUM_LEDS, CRGB::Green);
-        FastLED.show();
+		// Définir la couleur des LED en rouge
+		fill_solid(color_leds, NUM_LEDS, CRGB::Red);
+		FastLED.show();
 
-        // Attendre un message du maître via Bluetooth
-        if (SerialBT.available())
-        {
-            String message = SerialBT.readStringUntil('\n');
-            Serial.println("Message du maître: " + message);
+		// Réinitialiser la variable ledColorSet à false
+		ledColorSet = false;
+		// Tenter de se reconnecter au réseau Wi-Fi
+		Init_WiFi();
+	}
+	else
+	{
+		// La carte est connectée au réseau Wi-Fi
+		if (!wifiConnected)
+		{
+			Serial.println("Connexion Wi-Fi réussi...");
+			wifiConnected = true;
 
-            // Répondre au maître via Bluetooth
-            SerialBT.println("Bonjour du slave");
-        }
+			// Vérifier si le buzzer est activé
+			if (buzzer_ON)
+			{
+				// Jouer un son positif pour indiquer que la connexion Internet est établie
+				tone(tonePin, 440, 200); // La4 (A4), durée de la note : 200 ms
+				delay(200);
+				noTone(tonePin);
+				delay(200);
+				tone(tonePin, 880, 200); // La5 (A5), durée de la note : 200 ms
+				delay(200);
+				noTone(tonePin);
+			}
 
-        // Vérifier si le jeu Switch Color doit être lancé
-        if (digitalRead(SWITCH_COLOR) == LOW)
-        {
-            reflex_time_active = false;
-            loading_active = false;
-            if (!switch_colorLed)
-            {
-                loading_active = false;
-                fill_solid(color_leds, NUM_LEDS, CRGB::White);
-                FastLED.show();
-            }
-            Switch_Color();
-        }
-    }
-    else
-    {
-        // La connexion Bluetooth n'est pas établie, essayez de vous connecter au maître
-        SerialBT.connect("ESP32_MASTER");
+		}
+		// Vérifiez si la couleur des LED a déjà été définie
+		if (!ledColorSet)
+		{
+			// Définir la couleur des LED en vert (ou une autre couleur de votre choix)
+			fill_solid(color_leds, NUM_LEDS, CRGB::Green);
+			FastLED.show(); // Ou strip.show() si vous utilisez la bibliothèque Adafruit NeoPixel
 
-        // Définir la couleur des LED en rouge pour indiquer que la connexion est rompue ou en cours de connexion
-        fill_solid(color_leds, NUM_LEDS, CRGB::Red);
-        FastLED.show();
-    }
+			ledColorSet = true; // Mettre à jour la variable pour indiquer que la couleur des LED a été définie
+		}
+
+////////////////////////////////////////////////////////////////////////////////
+		// Vérifiez si le mode d'entraînement AIM doit être activé
+		if (digitalRead(REFLEX_TIME) == HIGH && !reflex_time_active)
+		{
+			reflex_time_active = true;
+			switch_colorLed = false;
+			loading_active = true;
+			Reflex_Time();
+		}
+		else if (digitalRead(REFLEX_TIME) == LOW && reflex_time_active)
+		{
+			reflex_time_active = false;
+			loading_active = false;
+			fill_solid(color_leds, NUM_LEDS, CRGB::Black); // Éteindre toutes les LEDs
+			FastLED.show();
+		}
+		else if (digitalRead(SWITCH_COLOR) == LOW)
+		{
+			reflex_time_active = false;
+			loading_active = false;
+			if (!switch_colorLed)
+			{
+				loading_active = false;
+				fill_solid(color_leds, NUM_LEDS, CRGB::White);
+				FastLED.show();
+			}
+			Switch_Color();
+		}
+		else if (!reflex_time_active && loading_active)
+		{
+			loading_active = false;
+			fill_solid(color_leds, NUM_LEDS, CRGB::Black); // Éteindre toutes les LEDs
+			FastLED.show();
+		}
+	}
+////////////////////////////////////////////////////////////////////////////////
+
 }
-
 
 /*
 	--------- --------- --------- --------- ---------- ---------- ----------
