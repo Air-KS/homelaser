@@ -102,8 +102,8 @@ void loop()
         // Attendre un message du maître via Bluetooth
         if (SerialBT.available())
         {
-            String message = SerialBT.readStringUntil('\n');
-            Serial.println("Message du maître: " + message);
+            //String message = SerialBT.readStringUntil('\n');
+            //Serial.println("Message du maître: " + message);
 
             // Répondre au maître via Bluetooth
             //SerialBT.println("Bonjour du slave");
