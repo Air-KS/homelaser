@@ -91,11 +91,13 @@ void loop()
             tone(tonePin, 880, 200);
             delay(200);
             noTone(tonePin);
+
+			buzzer_ON = false;
         }
 
         // Définir la couleur des LED en vert pour indiquer que la connexion est établie
-        fill_solid(color_leds, NUM_LEDS, CRGB::Green);
-        FastLED.show();
+        //fill_solid(color_leds, NUM_LEDS, CRGB::Green);
+        //FastLED.show();
 
         // Attendre un message du maître via Bluetooth
         if (SerialBT.available())
@@ -104,7 +106,7 @@ void loop()
             Serial.println("Message du maître: " + message);
 
             // Répondre au maître via Bluetooth
-            SerialBT.println("Bonjour du slave");
+            //SerialBT.println("Bonjour du slave");
         }
 
         // Vérifier si le jeu Switch Color doit être lancé
