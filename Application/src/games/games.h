@@ -12,6 +12,7 @@ void playNegativeSound();
 
 // Switch_Color
 void Switch_Color();
+void changeColor(String color);
 
 // Variable global
 extern bool reflex_time_running;
