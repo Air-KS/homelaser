@@ -1,11 +1,6 @@
-//src/main.ino
+//src/main.cpp
 
 #include "main.h"
-#include "pitches.h"
-#include "prototypes.h"
-#include "broches.h"
-#include "music/music.h"
-#include "games/games.h"
 
 // Définit les paramètres pour les LED : luminosité, couleurs et palette
 uint8_t brightness;
@@ -32,6 +27,9 @@ bool switch_colorLed = false;
 bool reflex_time_active = false;
 bool reflex_time_running = false;
 
+Scheduler userScheduler;
+painlessMesh mesh;
+AsyncWebServer server(80);
 
 /*
 	--------- --------- --------- --------- ---------- ---------- ----------
@@ -51,6 +49,7 @@ void setup()
 	// Initialise la communication et Attend qu'elle soit prête = 115200
 	Serial.begin(kBaudRate);
 	Init_WiFi();
+	Init_Mesh();
 	while (!Serial)
 	{
 		delay(50);
@@ -66,6 +65,19 @@ void setup()
 	pinMode(SWITCH_COLOR, INPUT_PULLUP);
 	pinMode(SOUND_PIN, INPUT_PULLUP);
 	pinMode(tonePin, OUTPUT);
+
+	    // Configuration des routes du serveur web
+    server.on("/color", HTTP_POST, [](AsyncWebServerRequest *request){
+        if (request->hasParam("color", true)) {
+            String color = request->getParam("color", true)->value();
+            changeColor(color); // Appel à la fonction changeColor
+            request->send(200, "text/plain", "Color changed to " + color);
+        } else {
+            request->send(400, "text/plain", "Color not specified");
+        }
+    });
+
+    server.begin();
 }
 
 /*
@@ -76,6 +88,7 @@ void setup()
 
 void loop()
 {
+	mesh.update();
 	// La connexion au Wi-Fi
 	if (WiFi.status() != WL_CONNECTED)
 	{
