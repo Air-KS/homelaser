@@ -27,9 +27,9 @@ bool switch_colorLed = false;
 bool reflex_time_active = false;
 bool reflex_time_running = false;
 
-Scheduler userScheduler;
-painlessMesh mesh;
-AsyncWebServer server(80);
+// Scheduler userScheduler;
+// painlessMesh mesh;
+// AsyncWebServer server(80);
 
 /*
 	--------- --------- --------- --------- ---------- ---------- ----------
@@ -49,7 +49,7 @@ void setup()
 	// Initialise la communication et Attend qu'elle soit prête = 115200
 	Serial.begin(kBaudRate);
 	Init_WiFi();
-	Init_Mesh();
+	// Init_Mesh();
 	while (!Serial)
 	{
 		delay(50);
@@ -66,6 +66,7 @@ void setup()
 	pinMode(SOUND_PIN, INPUT_PULLUP);
 	pinMode(tonePin, OUTPUT);
 
+/*
 	    // Configuration des routes du serveur web
     server.on("/color", HTTP_POST, [](AsyncWebServerRequest *request){
         if (request->hasParam("color", true)) {
@@ -78,6 +79,8 @@ void setup()
     });
 
     server.begin();
+*/
+
 }
 
 /*
@@ -88,7 +91,7 @@ void setup()
 
 void loop()
 {
-	mesh.update();
+	//mesh.update();
 	// La connexion au Wi-Fi
 	if (WiFi.status() != WL_CONNECTED)
 	{

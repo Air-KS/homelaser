@@ -11,7 +11,7 @@
 
 #include <ESPAsyncWebServer.h>
 #include <painlessMesh.h>
-#include "setup/setup.h"
+// #include "setup/setup.h"
 #include "games/games.h"
 #include "music/music.h"
 #include "pitches.h"
